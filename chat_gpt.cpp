@@ -22,45 +22,45 @@ int computeTagBits(int address, int numIndexBits, int numOffsetBits) {
 bool accessCache(int address, vector<vector<CacheEntry>>& cache, int numIndexBits, int numOffsetBits) {
     int index = (address >> numOffsetBits) & ((1 << numIndexBits) - 1);
     int tag = computeTagBits(address, numIndexBits, numOffsetBits);
+    int offset = address & ((1 << numOffsetBits) - 1);
 
-    // Search for a matching tag and address in the cache
+    // Search for a matching tag in the cache
     for (int i = 0; i < cache[index].size(); i++) {
-        if (cache[index][i].valid && cache[index][i].tag == tag && cache[index][i].address == address) {
+        if (cache[index][i].valid && cache[index][i].tag == tag) {
             // Hit!
             cout << "HIT!!" << endl;
-            cache[index][i].counter = 0;
-            return true;
+            if (cache[index][i].counter == cache[index].size() - 1) {
+                // This entry was already the most recently used, so no need to update the counters
+                return true;
+            } else {
+                // Update the counters for all entries with a higher counter value
+                int currentCounter = cache[index][i].counter;
+                for (int j = 0; j < cache[index].size(); j++) {
+                    if (cache[index][j].counter > currentCounter) {
+                        cache[index][j].counter--;
+                    }
+                }
+                // Set the counter of the hit entry to the maximum value
+                cache[index][i].counter = cache[index].size() - 1;
+                return true;
+            }
         }
     }
 
-    // Miss - update an existing entry with the same tag or replace the oldest entry
+    // Miss - evict the oldest entry and insert the new one
+    cout << "MISS!!" << endl;
     int oldestEntryIndex = 0;
     int oldestEntryCounter = cache[index][0].counter;
-    bool foundExistingEntry = false;
-    int existingEntryIndex = -1;
-    cout << "MISS!!" << endl;
-    for (int i = 0; i < cache[index].size(); i++) {
+    for (int i = 1; i < cache[index].size(); i++) {
         if (cache[index][i].counter < oldestEntryCounter) {
             oldestEntryIndex = i;
             oldestEntryCounter = cache[index][i].counter;
         }
-        if (cache[index][i].valid && cache[index][i].tag == tag) {
-            foundExistingEntry = true;
-            existingEntryIndex = i;
-        }
     }
-    if (foundExistingEntry) {
-        cache[index][existingEntryIndex].counter = 0;
-        cache[index][existingEntryIndex].address = address;
-    } else {
-        cache[index][oldestEntryIndex] = { true, tag, 0, address };
-    }
-    // Increment counters for all cache entries
-    for (int i = 0; i < cache[index].size(); i++) {
-        cache[index][i].counter++;
-    }
+    cache[index][oldestEntryIndex] = { true, tag, static_cast<int>(cache[index].size() - 1) };
     return false;
 }
+
 
 
 void printCache(vector<vector<CacheEntry>>& cache) {
@@ -112,18 +112,7 @@ vector<vector<CacheEntry>> cache(numEntries / associativity, vector<CacheEntry>(
         outFile << dec << address << " : " << (hit ? "HIT" : "MISS") << endl;
 
         // Print out the cache contents after each access
-        cout << "Cache contents:" << endl;
-        for (int i = 0; i < cache.size(); i++) {
-            cout << "Set " << i << ": ";
-            for (int j = 0; j < cache[i].size(); j++) {
-                if (cache[i][j].valid) {
-                    cout << hex << cache[i][j].tag << " ";
-                } else {
-                    cout << "- ";
-                }
-            }
-            cout << endl;
-        }
+        printCache(cache);
         cout << endl;
     }
 
