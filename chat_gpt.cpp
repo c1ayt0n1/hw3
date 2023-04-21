@@ -26,7 +26,7 @@ bool accessCache(int address, vector<vector<CacheEntry>>& cache, int numIndexBit
 
     // Search for a matching tag in the cache
     for (int i = 0; i < cache[index].size(); i++) {
-        if (cache[index][i].valid && cache[index][i].tag == tag) {
+        if (cache[index][i].valid && cache[index][i].tag == tag && cache[index][i].address == address) {
             // Hit!
             cout << "HIT!!" << endl;
             if (cache[index][i].counter == cache[index].size() - 1) {
@@ -57,7 +57,7 @@ bool accessCache(int address, vector<vector<CacheEntry>>& cache, int numIndexBit
             oldestEntryCounter = cache[index][i].counter;
         }
     }
-    cache[index][oldestEntryIndex] = { true, tag, static_cast<int>(cache[index].size() - 1) };
+    cache[index][oldestEntryIndex] = { true, tag, static_cast<int>(cache[index].size() - 1), address };
     return false;
 }
 
